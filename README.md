@@ -36,7 +36,7 @@ sudo apt-get install z3
   (present S emit S1 emit S2))
 ))
 ```
-Execution results:
+Execution results: (./hip src/programs/APLAS20_fig6.txt )
 ```
 <<<<< Logical Correctness Checking >>>>>
 =========================
@@ -57,7 +57,48 @@ Forward Result =
 ```
 
 
+```
+/*
+    ensure [ A, E  ] . [  B, C,   F ] . [ G] \/ (_^*) . [G]
+*/
 
+(signal A (signal B (signal C (signal D (signal E (signal F (signal G 
+  (
+  (emit A;
+    (pause;
+      (emit B;
+        emit C
+      )))
+  ||
+  (emit E;
+    (pause;
+      (emit F;
+        (pause;
+          emit G
+        )))))
+)))))))
+```
+Execution results: (./hip src/programs/APLAS20_fig7.txt)
+```
+<<<<< Logical Correctness Checking >>>>>
+=========================
+Logical correct! 
+Forward Result = 
+[ A    E  ] . [  B C   F ] . [       G]
+
+ <<<<< Temporal Verification >>>>>
+====================================
+[A;E].[B;C;F].[G] |- [A;E].[B;C;F].[G] + (_)^*.[G]
+[Result] Succeed
+[Verification Time: 9e-05 s]
+ 
+
+* [A;E].[B;C;F].[G] |- [A;E].[B;C;F].[G] + (_)^*.[G]
+* └── (-[A;E])[A;E].[B;C;F].[G] |- [A;E].[B;C;F].[G] + (_)^*.[G]   [UNFOLD]
+*     └── (-[B;C;F])[B;C;F].[G] |- [B;C;F].[G] + (_)^*.[G]   [UNFOLD]
+*         └── (-[G])[G] |- [G] + (_)^*.[G]   [UNFOLD]
+*             └── Emp |- (_)^*.[G] + Emp   [PROVE]
+```
 
 
 
