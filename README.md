@@ -70,8 +70,7 @@ Forward Result =
 *             └── Emp |- (_)^*.[G] + Emp   [PROVE]
 ```
 
-2. 
-1. APLAS20_fig9:
+2. APLAS20_fig9:
 ```
 /*
     ensure (_) .(( _ . [   C])^w)
@@ -114,6 +113,49 @@ Forward Result =
 *         └── (-[C])[C].([B].[C])^w.[] |- [C].(_.[C])^w   [UNFOLD]
 *             └── ([B].[C])^w |- (_.[C])^w   [PROVE]
 ```
+
+3. causality_check:
+```
+/*
+    ensure [ SO1,  SL1, SL2 ]
+*/
+
+(signal SO1 (signal SO2 
+(signal SL1 (signal SL2 (signal SL3
+(
+  (present SL1
+    (present SL2 
+              emit SO1 
+              emit SL3) 
+    (present SL2 
+              emit SO2 
+              emit SL3))
+||
+  (emit SL2;
+  ((present SL3 pause nothing);
+    emit SL1 ))))
+))))
+```
+Results by executing ./hip src/programs/causality_check.txt.
+```
+<<<<< Logical Correctness Checking >>>>>
+=========================
+Logical correct! 
+Forward Result = 
+[ SO1  SL1 SL2 ]
+
+ <<<<< Temporal Verification >>>>>
+====================================
+[SO1;SL1;SL2] |- [SO1;SL1;SL2]
+[Result] Succeed
+[Verification Time: 2.2e-05 s]
+ 
+
+* [SO1;SL1;SL2] |- [SO1;SL1;SL2]
+* └── (-[SO1;SL1;SL2])[SO1;SL1;SL2] |- [SO1;SL1;SL2]   [UNFOLD]
+*     └── Emp |- Emp   [PROVE]
+```
+
 
 ### Examples:
 
