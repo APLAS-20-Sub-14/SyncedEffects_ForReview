@@ -26,37 +26,7 @@ sudo apt-get install z3
 
 
 ### Entailments Checking Examples:
-```
-/*
-    ensure ([S2 ]^*)
-*/
-
-(signal S2 (signal S1 
-(signal S
-  (present S emit S1 emit S2))
-))
-```
-Execution results: (./hip src/programs/APLAS20_fig6.txt )
-```
-<<<<< Logical Correctness Checking >>>>>
-=========================
-Logical correct! 
-Forward Result = 
-[ S2  ]
-
- <<<<< Temporal Verification >>>>>
-====================================
-[S2] |- ([S2])^*
-[Result] Succeed
-[Verification Time: 2.1e-05 s]
- 
-
-* [S2] |- ([S2])^*
-* └── (-[S2])[S2] |- ([S2])^*   [UNFOLD]
-*     └── Emp |- ([S2])^*   [PROVE]
-```
-
-
+1. APLAS20_fig7:
 ```
 /*
     ensure [ A, E  ] . [  B, C,   F ] . [ G] \/ (_^*) . [G]
@@ -78,7 +48,7 @@ Forward Result =
         )))))
 )))))))
 ```
-Execution results: (./hip src/programs/APLAS20_fig7.txt)
+Results by executing ./hip src/programs/APLAS20_fig7.txt.
 ```
 <<<<< Logical Correctness Checking >>>>>
 =========================
