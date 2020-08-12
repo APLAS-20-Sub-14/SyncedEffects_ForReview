@@ -157,24 +157,179 @@ Forward Result =
 ```
 
 
-### Examples:
-
-Entailments Checking 
-
+### Entailments Checking Examples:
+1 ./sleek src/effects/Disjunction_both.ee
 ```
-./sleek src/effects/test1.txt 
+====================================
+[A;B] + [C] + [B;D] |- [A;D] + [B]
+[Result] Fail
+[Verification Time: 5.6e-05 s]
+ 
+
+* [A;B] + [C] + [B;D] |- [A;D] + [B]
+* └── (-[A;B])[A;B] + [C] + [B;D] |- [A;D] + [B]   [UNFOLD]
+*     ├── (-[C])[A;B] + [C] + [B;D] |- [A;D] + [B]   [UNFOLD]
+*     │   ├── (-[B;D])[A;B] + [C] + [B;D] |- [A;D] + [B]   [UNFOLD]
+*     │   │   └── Emp |- Emp   [PROVE]
+*     │   └── Emp |- _|_   [DISPROVE]
+*     └── Emp |- Emp   [PROVE]
+
+====================================
+[A;B] + [C] + [B;D] |- [A;D] + [B] + [C]
+[Result] Succeed
+[Verification Time: 8.2e-05 s]
+ 
+
+* [A;B] + [C] + [B;D] |- [A;D] + [B] + [C]
+* └── (-[A;B])[A;B] + [C] + [B;D] |- [A;D] + [B] + [C]   [UNFOLD]
+*     ├── (-[C])[A;B] + [C] + [B;D] |- [A;D] + [B] + [C]   [UNFOLD]
+*     │   ├── (-[B;D])[A;B] + [C] + [B;D] |- [A;D] + [B] + [C]   [UNFOLD]
+*     │   │   └── Emp |- Emp   [PROVE]
+*     │   └── Emp |- Emp   [PROVE]
+*     └── Emp |- Emp   [PROVE]
+
+====================================
+[A;C] + ([B;D])^* |- (_)^* + [A]
+[Result] Succeed
+[Verification Time: 5.4e-05 s]
+ 
+
+* [A;C] + ([B;D])^* |- (_)^* + [A]
+* └── (-[A;C])[A;C] + ([B;D])^* |- (_)^* + [A]   [UNFOLD]
+*     └── (-[B;D])[A;C] + ([B;D])^* |- (_)^* + [A]   [UNFOLD]
+*         └── (-[B;D])([B;D])^* |- (_)^*   [UNFOLD]
+*             └── ([B;D])^* |- (_)^*   [PROVE]
+
+====================================
+[D;B] + [A;B].[C;D] |- [A].[C] + [B]
+[Result] Succeed
+[Verification Time: 6.6e-05 s]
+ 
+
+* [D;B] + [A;B].[C;D] |- [A].[C] + [B]
+* └── (-[D;B])[D;B] + [A;B].[C;D] |- [A].[C] + [B]   [UNFOLD]
+*     └── (-[A;B])[D;B] + [A;B].[C;D] |- [A].[C] + [B]   [UNFOLD]
+*         └── (-[C;D])[C;D] |- [C] + Emp   [UNFOLD]
+*             └── Emp |- Emp   [PROVE]
+
+====================================
+[A;B] + [C;D] + [E] |- [B] + (_)^*
+[Result] Succeed
+[Verification Time: 6.8e-05 s]
+ 
+
+* [A;B] + [C;D] + [E] |- [B] + (_)^*
+* └── (-[A;B])[A;B] + [C;D] + [E] |- [B] + (_)^*   [UNFOLD]
+*     ├── (-[C;D])[A;B] + [C;D] + [E] |- [B] + (_)^*   [UNFOLD]
+*     │   ├── (-[E])[A;B] + [C;D] + [E] |- [B] + (_)^*   [UNFOLD]
+*     │   │   └── Emp |- (_)^*   [PROVE]
+*     │   └── Emp |- (_)^*   [PROVE]
+*     └── Emp |- Emp + (_)^*   [PROVE]
 ```
 
-Program Verification
 
-```
-./hip src/programs/fig5.txt
-```
+### LTL to Effects Translator Examples:
 
-LTL to Effects Translator
-
-```
 ./ltl src/ltl/Traffic_light.ltl 
+
+```
+====================================
+([] Green)
+
+[Translated to Effects] ===>
+ 
+([ Green])^* 
+
+====================================
+(<> Green)
+
+[Translated to Effects] ===>
+ 
+(_)^* . [ Green] 
+
+====================================
+(<> Red)
+
+[Translated to Effects] ===>
+ 
+(_)^* . [ Red] 
+
+====================================
+(<> Yellow)
+
+[Translated to Effects] ===>
+ 
+(_)^* . [ Yellow] 
+
+====================================
+(<> ([] Green))
+
+[Translated to Effects] ===>
+ 
+(_)^* . ([ Green])^* 
+
+====================================
+([] (<> Red))
+
+[Translated to Effects] ===>
+ 
+((_)^* . [ Red])^* 
+
+====================================
+((<> Red) -> (! (Green U Red)))
+
+[Translated to Effects] ===>
+ 
+(!(_)^* . [ Red])
+(!([ Green])^* . [ Red]) 
+
+====================================
+([] (Red -> (! (XGreen))))
+
+[Translated to Effects] ===>
+ 
+((![ Red]))^*
+((!_ . [ Green]))^* 
+
+====================================
+([] (Red -> (<> Green)))
+
+[Translated to Effects] ===>
+ 
+((![ Red]))^*
+((_)^* . [ Green])^* 
+
+====================================
+([] (Red -> ([] (! Green))))
+
+[Translated to Effects] ===>
+ 
+((![ Red]))^*
+(((![ Green]))^*)^* 
+
+====================================
+([] (Red -> (! (Green U Yellow))))
+
+[Translated to Effects] ===>
+ 
+((![ Red]))^*
+((!([ Green])^* . [ Yellow]))^* 
+
+====================================
+([] (Red -> (X(Red U Yellow))))
+
+[Translated to Effects] ===>
+ 
+((![ Red]))^*
+(_ . ([ Red])^* . [ Yellow])^* 
+
+====================================
+([] (Red -> (X(Red U (X(Yellow U Green))))))
+
+[Translated to Effects] ===>
+ 
+((![ Red]))^*
+(_ . ([ Red])^* . _ . ([ Yellow])^* . [ Green])^* 
 ```
 
 ### To Clean:
