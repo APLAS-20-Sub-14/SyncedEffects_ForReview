@@ -8,15 +8,24 @@ Esterel is an imperative style language that has found success in many safety-cr
 ### To Compile:
 
 ```
-git clone https://github.com/songyahui/SyncedEffects.git
+git clone https://github.com/APLAS-20-Sub-14/SyncedEffects.git
 cd SyncedEffects
 chmod 755 clean 
 chmod 755 compile 
 ./compile
 ```
 
+### Dependencies:
 
-### Some Examples:
+```
+opam switch create 4.07.1
+eval $(opam env)
+sudo apt-get install menhir
+sudo apt-get install z3
+```
+
+
+### Entailments Checking Examples:
 ```
 /*
     ensure ([S2 ]^*)
@@ -27,7 +36,7 @@ chmod 755 compile
   (present S emit S1 emit S2))
 ))
 ```
-
+Execution results:
 ```
 <<<<< Logical Correctness Checking >>>>>
 =========================
@@ -50,14 +59,7 @@ Forward Result =
 
 
 
-### Dependencies:
 
-```
-opam switch create 4.07.1
-eval $(opam env)
-sudo apt-get install menhir
-sudo apt-get install z3
-```
 
 ### Examples:
 
