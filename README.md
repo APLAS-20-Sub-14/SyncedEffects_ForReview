@@ -24,8 +24,9 @@ sudo apt-get install menhir
 sudo apt-get install z3
 ```
 
+## Next, we display examples upon (1) Esterel Program Verification, (2) Entailments Checking, and (3) LTL to Effects Translation 
 
-### Entailments Checking Examples:
+### (1) Program Verification Examples:
 1. APLAS20_fig7:
 ```
 /*
@@ -157,7 +158,7 @@ Forward Result =
 ```
 
 
-### Entailments Checking Examples:
+### (2) Entailments Checking Examples:
 1 ./sleek src/effects/Disjunction_both.ee
 ```
 ====================================
@@ -228,7 +229,7 @@ Forward Result =
 ```
 
 
-### LTL to Effects Translator Examples:
+### (3) LTL to Effects Translator Examples:
 
 ./ltl src/ltl/Traffic_light.ltl 
 
