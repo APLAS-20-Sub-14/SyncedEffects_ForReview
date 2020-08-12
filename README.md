@@ -48,7 +48,7 @@ sudo apt-get install z3
         )))))
 )))))))
 ```
-Results by executing ./hip src/programs/APLAS20_fig7.txt.
+Results by executing ./hip src/programs/APLAS20_fig7.txt
 ```
 <<<<< Logical Correctness Checking >>>>>
 =========================
@@ -70,7 +70,50 @@ Forward Result =
 *             └── Emp |- (_)^*.[G] + Emp   [PROVE]
 ```
 
+2. 
+1. APLAS20_fig9:
+```
+/*
+    ensure (_) .(( _ . [   C])^w)
+*/
 
+(signal A
+(signal B 
+(signal C
+ (
+ emit A;
+ (loop 
+ (pause;
+ (
+   emit B;
+   (
+   pause;
+   emit C   
+   ) 
+   )
+ ))))))
+```
+Results by executing ./hip src/programs/APLAS20_fig7.txt.
+```
+<<<<< Logical Correctness Checking >>>>>
+=========================
+Logical correct! 
+Forward Result = 
+[ A  ] . ([  B ] . [   C])^w . 
+
+ <<<<< Temporal Verification >>>>>
+====================================
+[A].([B].[C])^w.[] |- _.(_.[C])^w
+[Result] Succeed
+[Verification Time: 6e-05 s]
+ 
+
+* [A].([B].[C])^w.[] |- _.(_.[C])^w
+* └── (-[A])[A].([B].[C])^w.[] |- _.(_.[C])^w   [UNFOLD]
+*     └── (-[B])([B].[C])^w |- (_.[C])^w   [UNFOLD]
+*         └── (-[C])[C].([B].[C])^w.[] |- [C].(_.[C])^w   [UNFOLD]
+*             └── ([B].[C])^w |- (_.[C])^w   [PROVE]
+```
 
 ### Examples:
 
