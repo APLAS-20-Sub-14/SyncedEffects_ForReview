@@ -25,6 +25,13 @@ sudo apt-get install menhir
 sudo apt-get install z3
 ```
 
+### Test Suit Provided:
+
+```
+1. 96 Pure Esterel programs in src/programs
+2. 100 Effects Inclusions in src/effects
+```
+
 ## Next, we display examples upon (1) Esterel Program Verification, (2) Entailments Checking, and (3) LTL to Effects Translation 
 
 ### (1) Program Verification Examples:
