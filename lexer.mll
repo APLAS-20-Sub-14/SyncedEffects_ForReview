@@ -24,7 +24,7 @@ let float = digit* frac? exp?
 (* part 3 *)
 let white = [' ' '\t']+
 let newline = '\n' | '\r' | "\r\n" 
-let id = ['a'-'v' 'x'-'z' 'A'-'Z'] ['a'-'z' 'A'-'Z' '0'-'9' '_']*
+let id = ['a'-'z' 'A'-'Z'] ['a'-'z' 'A'-'Z' '0'-'9' '_']*
 
 
 rule token = parse
@@ -36,12 +36,26 @@ rule token = parse
 | "signal" {SIGNAL}
 | "emit" {EMIT}
 | "present" {PRESENT}
+| "run" {RUN}
 | "trap" {TRAP}
 | "exit" {EXIT}
 | "emp" { EMPTY }
+| "require" {REQUIRE}
 | "ensure" {ENSURE}
+| "module" {MODULE}
+| "input" {INPUT}
+| "output" {OUTPUT}
+| "end" {END}
+| "in" {IN}
+| "then" {THEN}
+| "else" {ELSE}
+| "abort" {ABORT} 
+| "when" {WHEN}
+| 'w' {OMEGA}
 | '(' { LPAR }
 | ')' { RPAR }
+| '{' { LBRACK  }
+| '}' { RBRACK }
 | ';' { SIMI }
 | int      { INTE (int_of_string (Lexing.lexeme lexbuf)) }
 | '.' { CONCAT }
@@ -51,34 +65,34 @@ rule token = parse
 | id as str { VAR str }
 | "|-" {ENTIL}
 | "\\/" {DISJ}
-| '_' {UNDERLINE}
-| '[' { LBrackets }
-| ']' { RBrackets }
 | ',' { COMMA }
-
+| ':' { COLON }
 | '^' { POWER }
-| 'w' { OMEGA }
 | '*' {KLEENE}
+
 | "<>" {FUTURE}  
-| "[]" {GLOBAL}
+
 | "->" {IMPLY}
 | '!' {LTLNOT}
 
 | "&&" {LILAND}
 | "||" {LILOR}
 
-| "/*" {LSPEC}
-| "*/" {RSPEC}
+| "/*@" {LSPEC}
+| "@*/" {RSPEC}
 | eof { EOF }
 
 (*
 
+
+| '[' { LBrackets }
+| ']' { RBrackets }
 | "TRUE" { TRUE }
 | "FALSE" { FALSE }
 | "if" {IF}
 | "else" {ELSE}
-| "require" {REQUIRE}
 
+| "[]" {GLOBAL}
 | "include" {INCLUDE}
 | "true" { TRUEE (bool_of_string (Lexing.lexeme lexbuf))}
 | "false" { FALSEE (bool_of_string (Lexing.lexeme lexbuf))}

@@ -1,0 +1,17 @@
+  module testcase2:
+  output A,B, C;
+
+  /*@
+  require {} 
+  ensure {A, B} . ({C}. {B})*
+  @*/
+
+  emit A;
+  loop 
+  emit B;
+  pause;
+  emit C;
+  pause
+  end loop 
+
+  end module

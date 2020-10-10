@@ -1,0 +1,13 @@
+  module testcase6:
+  output A,B, C;
+
+  /*@
+  require {} 
+  ensure ({ })*
+  @*/
+
+  loop 
+    pause
+  end loop 
+
+  end module

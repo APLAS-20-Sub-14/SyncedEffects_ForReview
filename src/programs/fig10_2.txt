@@ -1,5 +1,0 @@
-(signal S1
-( (present S1
-nothing
-nothing);
-emit S1 ))

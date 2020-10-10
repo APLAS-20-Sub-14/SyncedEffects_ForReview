@@ -9,542 +9,517 @@ open Rewriting
 open Sys
 
 
-let rec append_history_now (history:es) ((cons, now) : instance) :es = 
-  match history with 
-    Bot -> Bot
-  | Emp -> Instance (cons, now) 
-  | Instance _  ->  Con(history, Instance (cons, now))
-  | Con (es1, es2) -> Con (es1, append_history_now es2 (cons, now))
-  | Omega esIn -> Con (history , Instance (cons, now))
-  | Any -> Con (Any, Instance (cons, now))
-  | Kleene esIn -> Con (history , Instance (cons, now))
-  | Ntimed (esIn, n) -> Con (history , Instance (cons, now))
-  | Not esIn -> Con (history , Instance (cons, now))
-;;
 
-let compareState s1 s2 : bool =
-  match (s1, s2) with 
-    (One, One) -> true 
-  | (Zero, Zero) -> true 
-  | _ -> false 
-  ;;
-
-let union (assign : mapping list) :mapping list = 
-  let rec oneOfOne all1 v :bool =
-    match all1 with 
-      [] -> false 
-    | x::xs-> String.compare x v == 0
-  in 
-  let allOne = List.map (fun (a, b) -> a) (List.filter (fun (v, s) -> compareState s One) assign) in
-  (*print_string ((List.fold_left (fun acc a -> acc ^"," ^ a) "" allOne)^"\n");*)
-  let allZero = List.map (fun (a, b) -> a) (List.filter (fun (v, s) -> compareState s Zero) assign) in
-  (*print_string ((List.fold_left (fun acc a -> acc ^"," ^ a) "" allZero)^"\n");*)
-  List.fold_left (fun acc a -> if oneOfOne allOne a then List.append acc [(a,  One)] else List.append acc [(a,  Zero)]) [] allZero
-
-  ;;
-
-
-
-
-let rec oneOfFalse (var, state) ss : bool =
-  match ss with 
-    [] -> false 
-  | (var1, state1):: xs -> if String.compare var var1 ==0 && compareState state1 state == false then true else oneOfFalse (var, state) xs
-;;
-(*true return has controdiction, false means no controdiction *)
-let rec checkHasFalse ss : bool = 
-  match ss with 
-  [] -> false 
-| x::xs -> if oneOfFalse x xs then true else checkHasFalse xs 
-;;
-
-let rec oneOf (var, state) ss : bool =
-  match ss with 
-    [] -> false 
-  | (var1, state1):: xs -> if String.compare var var1 ==0 && compareState state1 state then true else oneOf (var, state) xs
-;;
-
-let rec deleteRedundent sl : mapping list = 
-  match sl with 
-    [] -> sl 
-  | x::xs -> if oneOf x xs then deleteRedundent xs else List.append [x] (deleteRedundent xs)
-
-  ;;
-
-let rec unionTwoList (sl1) (sl2) : mapping list = 
-  let app = deleteRedundent (List.append sl1 sl2) in 
-  let rec helper acc sl : mapping list =  
-    match sl with
-      [] -> acc 
-    | (nm, sta)::xs -> if oneOfFalse (nm, sta) app then helper (List.append acc [(nm, One)]) xs else helper (List.append acc [(nm, sta)]) xs
-  in helper [] app
-  ;;
-
-
-let rec append_es_es (es1) (es2) : es = 
-  match es1 with
-    Bot -> Bot
-  | Emp -> es2
-  | Instance (con1, ss1)  ->  
-        (match es2 with 
-          Bot -> Bot 
-        | Emp -> es1
-        | Instance (con2, ss2) -> Instance (List.append con1 con2, unionTwoList ss1 ss2)
-        | Con (es21, es22) -> Con (append_es_es es1 es21, es22)
-        | Omega esIn2 -> Con (append_es_es es1 esIn2, es2)
-        |_ -> raise (Foo "append_es_es inside")
-        )
-  | Con (es11, es12) -> Con (es11, append_es_es es12 es2)
-  | Omega esIn1 -> Con (es1 , append_es_es esIn1 es2)
-  |_ -> raise (Foo "append_es_es outside")
-
-
-  ;;
-
-
-
-let rec checkExit name ss : bool = 
-  match ss with 
-    [] -> false
-  | (str, state)::xs -> if String.compare name str == 0 then true else checkExit name  xs
-
-  ;;
-
-  (*
-let rec disjunES (esList) : es =
-  let rec helper acc esL : es = 
-    match esL  with 
-      [] -> acc
-    | x ::xs  -> helper (Or (acc, x)) xs
-  in 
-    match esList with 
-      [] -> Emp
-    | x::xs -> helper x xs
-
-  ;;
-*)
-
-let make_nothing (evn: string list) : mapping list = 
-  List.map (fun a -> (a, Zero) ) evn 
-  ;;
-
-  
-let rec splitESfromLast es: (es * instance) =
-  match es with 
-    Instance ss -> (Emp, ss)
-  | Con (es1, es2) -> 
-    let (his, cu) = splitESfromLast es2 in 
-    (Con (es1, his), cu)
-  | Omega esIn -> 
-    (es, ([],[]))
-  (*let (his, curr) = splitESfromLast esIn in 
-    (Con (es, his), curr)
-    *)
-  | _ -> 
-  print_string (string_of_es es^"\n");
-  raise (Foo "splitESfromLast _")
-  ;;
-
-
-
-
-
-
-
-  
-let rec normalES es: es =
-  match es with 
-    Con (Con(es1, es2), es3) -> normalES (Con (normalES es1, normalES (Con(es2, es3)) ))
-  | Con (es1, es2) -> 
-      let norES1 = normalES es1 in 
-      let norES2 = normalES es2 in 
-      (*print_string (string_of_es norES1);*)
-      (match (norES1, norES2) with 
-        (Emp, _) -> norES2 
-      | (_, Emp) -> norES1
-      | (Bot, _) -> Bot 
-      | (_ , Bot) -> Bot 
-      (*
-      | (Con (ess, Omega esIn), _) -> Con (ess, Omega esIn)
-      | (Omega esIn, _) -> Omega esIn
-      *)
-      | _ -> Con (norES1, norES2)
-
-      )
-
-  | Instance (con, ss) -> 
-    let con1 = deleteRedundent con in 
-    let ss1 = deleteRedundent ss in 
-    if checkHasFalse (con1) then  Bot else 
-    (Instance (con1, ss1))
-  | Omega esIn -> Omega (normalES esIn)
-  | _ -> es 
-  ;;
-
-let normal_post postcondition : postcondition = 
-  List.map (fun (a, b, d) -> (normalES a, b, d)) postcondition
-
-  ;;
-
-let string_of_trace (trace :trace) :string = 
-  let (his, cur, d) = trace in  
-  let temp = normalES (Con(his, Instance cur))in
-  string_of_es temp;;
-
-let string_of_postcondition (post:postcondition):string = 
-  List.fold_left (fun acc a -> acc  ^ string_of_trace a ^ "\n") "" post
-  ;;
-
-let rec length_of_es (es:es) : int = 
-  match es with 
-    Emp -> 0
-  | Instance ins -> 1
-  | Con (es1, es2) -> length_of_es es1 + length_of_es es2
-  | _ -> raise (Foo "length_of_es")
-  ;;
-
-let rec esToList (es:es) : instance list = 
-  match es with 
-    Instance inI -> [inI]
-  | Con (es1, es2) -> List.append (esToList es1) (esToList es2)
-  | _ -> raise (Foo "esToList error")
-  ;;
-
-let rec listToES (inL:instance list) : es = 
-  match inL with 
-    [] -> Emp
-  | x::xs -> Con (Instance x, listToES xs)
-  ;;
-
-let get_max a b :int = 
-  if a < b then b else a 
-  ;;
-
-let rec zip_es_es (es_1, k1) (es_2, k2) :(es * int) = 
-
-  let listOfES1 = esToList (normalES es_1) in
-  let listOfES2 = esToList (normalES es_2) in
-  
-  let rec helper_zip (acc:instance list) (list1:instance list) (list2:instance list) (len:int): instance list = 
-    if len == 0 then  acc
-    else 
-    match (list1, list2) with 
-      (xs, []) -> List.append acc xs 
-    | ([], xs) -> List.append acc xs 
-    | ((con1, ss1)::xs, (con2, ss2)::ys) -> 
-      let curr = (List.append con1 con2, unionTwoList ss1 ss2) in 
-      helper_zip (List.append acc [curr]) xs ys (len -1)
-  in 
-  if get_max k1 k2 != 0 then 
-    if k1 > k2 && List.length listOfES1 < List.length listOfES2 then 
-      let length = List.length listOfES1 in  
-      let ziplist = helper_zip [] (listOfES1) (listOfES2) length in  
-      (normalES (listToES ziplist) , k1)
-    else if k1 < k2 && List.length listOfES1 > List.length listOfES2 then 
-      let length = List.length listOfES2 in  
-      let ziplist = helper_zip [] (listOfES1) (listOfES2) length in  
-      (normalES (listToES ziplist) , k2)
-    else if k1 > k2 && List.length listOfES1 > List.length listOfES2 then 
-      let length = List.length listOfES2 in  
-      let ziplist = helper_zip [] (listOfES1) (listOfES2) length in  
-      (normalES (listToES ziplist) , k2)
-    else 
-      let length = List.length listOfES1 in  
-      let ziplist = helper_zip [] (listOfES1) (listOfES2) length in  
-      (normalES (listToES ziplist) , k1)
-
-  else 
-  let length = get_max (List.length listOfES1) (List.length listOfES2) in 
-  
-  let ziplist = helper_zip [] (listOfES1) (listOfES2) length in  
-  (normalES (listToES ziplist) , 0)
-  ;;
-
-let rec setTrue ((con, ss):instance) (name) : instance= 
-  let rec helper (inn:mapping list ):mapping list  = 
-    (match inn with 
-    [] -> raise  (Foo (name^" is not decleared"))
-  | (x, state)::xs -> 
-    if String.compare x name == 0 then List.append [(x, One)] xs else  List.append [(x, state)] (helper xs)
-    )
-  in (con, helper ss)
-  ;;
-
-let add_Constain ((con, ss):instance) ((name, nowstate)) : instance= 
-  (*if compareState nowstate One then 
-  let (con', ss') = setTrue (con, ss) name in 
-  (List.append con' [(name, nowstate)], ss')
-  else
-  *) (List.append con [(name, nowstate)], ss)
-  ;;
-
-let rec can_fun (s:var) (prog:prog) :bool = 
+let rec can_fun (s:var) (prog:prog) (origin: prog) (full:spec_prog list) :bool = 
   match prog with 
     Nothing -> false 
   | Pause -> false 
-  | Seq (p1, p2) -> can_fun s p1 || can_fun s p2
-  | Par (p1, p2) -> can_fun s p1 || can_fun s p2
-  | Loop p -> can_fun s p
-  | Declear (v, p) -> can_fun s p 
+  | Seq (p1, p2) -> can_fun s p1 origin full || can_fun s p2 origin full
+  | Par (p1, p2) -> can_fun s p1 origin full || can_fun s p2 origin full
+  | Loop p -> can_fun s p origin full
+  | Declear (v, p) -> can_fun s p origin full
   | Emit str -> if String.compare str s == 0 then true else false 
-  | Present (v, p1, p2) -> can_fun s p1 || can_fun s p2
-  | Trap (mn, p) -> can_fun s p 
+  | Present (v, p1, p2) -> 
+    (*if can_fun v origin origin full then *)
+     can_fun s p1 origin full || can_fun s p2 origin full 
+     (*else can_fun s p2 origin full*)
+  | Trap (mn, p) -> can_fun s p origin full
   | Exit _ -> false 
-  ;;
-
-let rec getFirst (es:es) : instance =
-  match es with 
-  | Instance ins  -> ins
-  | Con (es1, es2) -> getFirst es1
-  | Omega es1 -> getFirst es1
-  | _ -> 
-  print_string (string_of_es es);
-  raise ( Foo "getfirst exc")
-  ;;
-
-let rec getLast (es:es) : instance =
-  match es with 
-  | Instance ins  -> ins
-  | Con (es1, es2) -> getLast es2
-  | Omega es1 -> getLast es1
-  | _ -> raise ( Foo "getLast exc")
-  ;;
-
-let rec getTail (es:es) : es =
-  match es with 
-  | Instance ins -> Emp
-  | Con (es1, es2) -> 
-    let temp = getTail es1 in
-    Con (temp , es2) 
-  | Omega es1 -> Con (getTail es1 , es)
-  | _ -> raise ( Foo "getTail exc")
-  ;;
-
-let rec allDefalut ((con, map):instance) : bool = 
-  match map with 
-    [] ->  true 
-  | (var, state) :: xs  -> if compareState state Zero then  allDefalut (con, xs) else false
-  ;;
-
-let rec containExit (con: mapping list) : bool = 
-  match con with 
-    [] -> false 
-  | (var, state)::xs -> 
-    if String.length var > 4 then 
-      if (String.compare (String.sub var 0 3) "Exit") == 0 then true 
-      else containExit xs 
-    else containExit xs 
-
-  ;;
-
-let rec es_length (es:es) : int = 
-  match es with 
-    Bot -> 0
-  | Emp -> 0
-  | Instance _ -> 1
-  | Con (es1, es2) -> es_length es1 + es_length es2
-  | Any -> 1
-  | Not _ -> 1
-  | _ -> raise (Foo "es_length")
-  ;;
-
-
-let rec forward (precondition:precondition) (prog:prog) (toCheck:prog) : postcondition =
-  let (evn, (history, curr)) = precondition in 
-  match prog with 
-    Nothing -> [(normalES history, curr, 0)]
-  | Emit s -> 
-    let newCurr = setTrue curr s in 
-    [(normalES history, newCurr, 0)]
-  | Pause -> 
-    let newHis = Con (history, Instance curr) in 
-    let newCurr = ([], make_nothing evn) in 
-    [(normalES newHis, newCurr, 0)]
-
-  | Present (s, p1, p2) -> 
-    let eff1 = forward (evn, (history, add_Constain curr (s, One) )) p1 toCheck in 
-    let eff2 = forward (evn, (history, add_Constain curr (s, Zero) )) p2 toCheck in 
-    if can_fun s toCheck == false then eff2 else 
-    List.append eff1 eff2
-(*    if can_fun s origin == false then temp2 else 
-    Or (temp1, temp2)
-*)
-  | Seq (p1, p2) ->  
-    let eff1 = forward (evn, (history, curr )) p1 toCheck in 
-    List.flatten (List.map (fun a -> 
-      let (newHis, newCurr, k) = a in 
-      if k = 0 then 
-      forward (evn, (newHis, newCurr)) p2 toCheck
-      else if k >= 2 then eff1
-      else 
-        let newHis' = Con (newHis, Instance newCurr) in 
-        let newCurr' = ([], make_nothing evn) in 
-        [(newHis', newCurr', k)]
-    
-    ) eff1)
-  | Par (p1, p2) ->  
-    let eff1 = forward (evn, (history, curr )) p1 toCheck in 
-    (*print_string (string_of_postcondition eff1^"\n");*)
-    let eff2 = forward (evn, (history, curr )) p2 toCheck in 
-    (*print_string (string_of_postcondition eff2^"\n");*)
-    List.flatten (List.map (fun (his_a, cur_a, k_a) -> 
-      List.map (fun (his_b, cur_b, k_b) -> 
-        let (temp, kF) = (zip_es_es ( (Con(his_a,  Instance cur_a )), k_a) ((Con (his_b, Instance cur_b )), k_b))in 
-        let (a, b) = splitESfromLast temp in 
-        (a, b, kF)
-        ) eff2) eff1 )
-
-    (*normalES (append_history_now history (List.append now (make_nothing evn)))*)
-  | Declear (s, progIn ) -> 
-    let (con, ss) = curr in 
-    forward ((List.append evn [s]), (history, (con, List.append ss [(s, Zero)]) )) progIn toCheck
-
-  | Exit (mn, d)-> 
-    [(normalES history, curr, d+2)]
-  
-  | Loop pIn -> 
-    let eff = normal_post (forward (evn, (Emp, ([], make_nothing evn) )) pIn toCheck )in 
-    (*print_string (string_of_postcondition eff^"\n");*)
-    List.map (fun (newHis, newCur, k) -> 
-      let first = getFirst (normalES newHis) in 
-      let last = newCur in 
-      let middle = getTail (normalES newHis) in 
-
-      (*print_string ("first" ^ string_of_instance first^"\n");
-      print_string ("last" ^ string_of_instance last^"\n");
-      print_string ("middle" ^ string_of_es middle^"\n");
-      *)
-      let temp = (
-        if k>=2 then append_es_es (Con (history, Instance curr)) (Con (newHis, Instance newCur)) 
-        else 
-        (match (allDefalut first, allDefalut last) with 
-          (true , true) -> 
-          (*print_string ("I am here\n");
-          print_string ("middle" ^ (string_of_es middle));
-          Con (Con (history, Instance curr), Omega ( middle) )
-                    *)
-          if es_length newHis == 1 
-          then Con (Con (history, Instance curr), Omega (Con (middle, Instance newCur)) )
-          else Con (Con (history, Instance curr), Omega ( middle) )
-
-        | (true, false) -> Con (Con (history, Instance curr), Omega (Con (middle, Instance newCur)))
-        | (false, true) -> Con (append_es_es (Con (history, Instance curr)) (Instance first), Omega (Con (middle, Instance first)))
-        | (false, false) -> 
-        let res = normalES(Con (append_es_es (Con (history, Instance curr)) (Instance first), Omega (append_es_es (Con (middle, Instance newCur)) (Instance first))))
-        
-        in 
-        res  
-        )
-      )
+  | Run proIn -> 
+    let rec helper modules = 
+        match modules with 
+          [] -> raise (Foo ("module "^proIn ^"undefined"))
+        | x::xs -> 
+        let (name, _, _, _, _, _) = x in
+        if String.compare name proIn == 0 then x else helper xs 
       in 
-      let (a, b) = splitESfromLast temp in 
-      (normalES a, b, k)
-      
-    )
-    eff
-
-  | Trap (mn, pIn) -> 
-    let eff = forward (evn, (Emp, ([], make_nothing evn) )) pIn toCheck in 
-    print_string (string_of_postcondition eff^"\n");
-    List.map (fun (newHis, newCur, k) -> 
-
-      let first = getFirst (normalES newHis) in 
-      let last = newCur in 
-      let middle = getTail (normalES newHis) in 
-
-      
-      let temp = (
-        if k >= 2 then 
-        (print_string ("I am here\n");
-        append_es_es (Con (history, Instance curr)) (Con (newHis, Instance newCur)) 
-        )
-        else 
-        (match (allDefalut first, allDefalut last) with 
-          (true , true) -> Con (Con (history, Instance curr), Omega ( middle) )
-        | (true, false) -> Con (Con (history, Instance curr), Omega (Con (Instance last, middle)))
-        | (false, true) -> Con (append_es_es (Con (history, Instance curr)) (Instance first), Omega (Con (middle, Instance first)))
-        | (false, false) -> 
-        Con (append_es_es (Con (history, Instance curr)) (Instance first), Omega (append_es_es middle (Instance first)))
-        )
-      )
-      in       
-      let (a, b) = splitESfromLast temp in 
-      if k ==2 then (a, b, 0)
-      else if k > 2 then (a, b, k - 1)
-      else 
-      (normalES a, b, k)
-      
-
-    )
-    eff
-
+      let (_, in_callee, out_callee, pre_callee, post_callee, body_calles) = helper full in 
+      can_fun s body_calles body_calles full
+  | Suspend (p, s) -> can_fun s p origin full
   ;;
 
-(*
-let rec getAllTheSIgnals (prog) acc: string list = 
-  match prog with 
-    Declear (s, progIn ) -> getAllTheSIgnals progIn (List.append acc [s])
-  | _ -> acc 
-  ;;
-  *)
-
-let fowward_inter prog : postcondition = 
-  (*let evn = getAllTheSIgnals prog [] in *)
-  (*let now = make_nothing evn in *)
-  let precondition = ([], (Emp, ([], []))) in 
-   (forward precondition prog prog)
   
+
+let rec p_es_To_state (es:p_es) :prog_states = 
+  let es = normalPES es in 
+  match es with 
+  | PEmp -> [(PEmp, None, None)]
+  | PInstance ins -> [(PEmp, Some ins, None)]
+  | PCon (es1, es2) -> 
+    let his_cur_list = p_es_To_state es2 in 
+    List.map (fun (his,cur,trap) -> (PCon (es1, his),cur, trap)) his_cur_list
+    
+  | PDisj (es1, es2) -> List.append (p_es_To_state es1) (p_es_To_state es2)
+  | PKleene esIn -> 
+    let his_cur_list = p_es_To_state esIn in 
+    List.map (fun (his,cur, trap) -> (PCon (es, his), cur, trap)) his_cur_list
+  | POmega esIn -> 
+    let his_cur_list = p_es_To_state esIn in 
+    List.map (fun (his,cur, trap) -> (PCon (es, his), cur, trap)) his_cur_list
+  | PNtimed (esIn, n) ->
+    assert (n>1);
+    let his_cur_list = p_es_To_state esIn in 
+    List.map (fun (his,cur, trap) -> (PCon (PNtimed (esIn, n-1), his), cur, trap)) his_cur_list
+
+  | PBot -> raise (Foo "there is a BOT HERE")
   ;;
 
-let rec logical_check es :es = 
+
+let rec state_To_p_es (state:prog_states):p_es = 
+  normalPES (
+  List.fold_left (fun acc (a, b, trap) -> 
+  match b with 
+    None -> PDisj (acc, a)
+  | Some b -> 
+  PDisj (acc, (PCon (a, PInstance b)))) PBot state
+  )
+  ;;
+
+
+
+
+let make_nothing (evn: string list) : signal list = 
+  List.map (fun a -> (Zero a) ) evn 
+  ;;
+
+let rec zip a b =
+  match (a,b) with
+    ([],[]) -> []
+    | ([],n::ns)-> []
+    | (n::ns,[]) -> []
+    | (k::ks, h::hs) -> (k,h)::zip ks hs ;;
+
+
+let rec split_p_es_head_tail (es:p_es) :(p_instance * p_es) list = 
   match es with 
-  Con (es1, es2) -> 
+  | PInstance ins -> [(ins, PEmp)]
+  | PCon (es1, es2) -> 
+    let head_tail_list = split_p_es_head_tail es1 in 
+    List.map (fun (head,tail) -> (head, PCon (tail, es2))) head_tail_list
+    
+  | PDisj (es1, es2) -> List.append (split_p_es_head_tail es1) (split_p_es_head_tail es2)
+  | PKleene esIn -> 
+    let head_tail_list = split_p_es_head_tail esIn in 
+    List.map (fun (head,tail) -> (head, PCon (tail, es))) head_tail_list
+  | PNtimed (esIn, n) ->
+    assert (n>1);
+    let head_tail_list = split_p_es_head_tail esIn in 
+    List.map (fun (head,tail) -> (head, PCon (tail, PNtimed (esIn, n-1)))) head_tail_list
 
-    let norES1 = logical_check es1 in 
-    let norES2 = logical_check es2 in 
-    (match (norES1, norES2) with 
-      (Emp, _) -> norES2 
-    | (Bot, _) -> Bot 
-    | (_ , Bot) -> Bot 
-    | _ -> Con (norES1, norES2)
-    )
-| Instance (con, ss) -> 
-  let con1 = deleteRedundent con in 
-  let ss1 = deleteRedundent ss in 
-  let temp =   if checkHasFalse (List.append con1 ss1) then  Bot else (Instance (con1, ss1)) in 
-  temp
+  | _ -> raise (Foo "there is a EMP OR BOT HERE in split_p_es_head_tail")
+  ;;
 
-| Omega esIn -> Omega (logical_check esIn)
-| _ -> es 
+let isEmp xs : bool = 
+  let noneZero = List.filter (fun a ->
+    match a with
+      Zero _ -> false
+    | _ -> true 
+  ) xs   in 
+  match noneZero with 
+    [] -> true 
+  | _ -> false 
 ;;
 
-let logical_check_post postcondition : es list = 
-  let trmp = List.map (fun (a, b, d) -> logical_check (Con (a, Instance b))) postcondition in  
+let rec filterZero (pes:p_es) : p_es = 
+  match pes with 
+  | PBot -> PBot
+  | PEmp -> PEmp
+  | PInstance (p, ins) -> 
+  PInstance (p, 
+    List.filter (
+      fun a -> 
+        match a with  
+        Zero _ -> false 
+      | One _ -> true 
+    ) ins )
+  | PCon (es1, es2) ->PCon (filterZero es1, filterZero es2)
+  | PDisj (es1, es2) ->PDisj (filterZero es1, filterZero es2)
+  | PKleene (es1) -> PKleene( filterZero es1)
+  | POmega (es1) -> POmega (filterZero es1)
+  | PNtimed (es1, n) -> PNtimed (filterZero es1, n)
+  ;;
 
-  List.fold_left (fun acc a -> 
-    match a with 
-      Bot -> acc
-    | _ -> List.append acc [a]) [] trmp
+let rec paralleEffLong es1 es2 : p_es = 
+  let norES1 = normalPES es1 in 
+  let norES2 = normalPES es2 in 
+  let norES1 = filterZero norES1 in 
+  let norES2 = filterZero norES2 in 
+  let fst1 = getFstPes norES1 in
+  let fst2 = getFstPes norES2 in 
+  let headcom = zip fst1 fst2 in 
+
+  let listPES =  List.map (fun (f1, f2) -> 
+  let der1 = derivativePes f1 norES1 in 
+  let der2 = derivativePes f2 norES2 in 
+  match (der1, der2) with 
+    (PEmp, _) -> PCon (PInstance (appendSL f1 f2), der2)
+  | (_, PEmp) -> PCon (PInstance (appendSL f1 f2), der1)
+  | _ -> PCon (PInstance (appendSL f1 f2), paralleEffLong der1 der2)) headcom
+  in
+  normalPES (
+  List.fold_left (fun acc a -> PDisj (acc, a)) PBot listPES
+  )
+
+   ;;
+
+ 
+let rec paralleEffShort es1 es2 : p_es = 
+  let norES1 = normalPES es1 in 
+  let norES2 = normalPES es2 in 
+  let norES1 = filterZero norES1 in 
+  let norES2 = filterZero norES2 in 
+  let fst1 = getFstPes norES1 in
+  let fst2 = getFstPes norES2 in 
+  let headcom = zip fst1 fst2 in 
+
+
+  let listES =  List.map (
+  fun (f1, f2) -> 
+    let der1 = normalPES (derivativePes f1 norES1) in 
+    let der2 = normalPES (derivativePes f2 norES2) in 
+
+
+    (match (der1, der2) with 
+    | (PEmp, _) -> PInstance (appendSL f1 f2)
+    | (_, PEmp) -> PInstance (appendSL f1 f2)
+    | (der1, der2) -> 
+      PCon (PInstance (appendSL f1 f2), paralleEffShort der1 der2))
+  ) headcom
+  
+  in
+  normalPES (
+  List.fold_left (fun acc a -> PDisj (acc, a)) PBot listES
+  )
+ ;;
+
+let rec lengthPES es : int =
+  match es with  
+| PEmp -> 0
+| PInstance _ -> 1 
+| PCon (es1, es2) -> lengthPES es1 + lengthPES es2
+
+| PNtimed (es1, n) -> (lengthPES es1) * n
+| _ -> raise (Foo "getlength error ")
+;;
+
+let equla_List_of_State left right : bool= 
+  true
+  ;;
+
+let setTrue (xs:signal list) (s:string) :signal list = 
+  let rec helper li acc = 
+  match li with 
+    [] -> acc
+  | x::xxs -> 
+    match x with 
+      (Zero str) -> if String.compare str s == 0 then List.append (List.append xxs acc) [(One s)]
+                    else helper xxs (List.append acc [x])
+    | _ -> helper xxs (List.append acc [x])
+  in helper xs [];
+  ;;
+
+let rec forward (evn: string list ) (current:prog_states) (prog:prog) (original:prog) (full: spec_prog list): prog_states =
+  match prog with 
+    Nothing -> 
+    List.map (fun (his, curr, trap) -> 
+    (his,  curr, trap )) current
+  | Emit s -> 
+    (*print_string (string_of_prg_state current ^ "\n");*)
+
+    List.map (fun (his, curr, trap) -> 
+      (match trap with 
+      | Some name  -> (his, curr, trap)
+      | None -> 
+          (match curr with 
+            None -> raise (Foo "Emit doesn't work...")
+          | Some (path, curr) -> 
+
+          (*print_string (string_of_instance (setTrue curr s) ^ "\n");*)
+
+          (his, Some (path, setTrue curr s), trap )
+          )
+      )) current
+  | Pause -> 
+    let helper (his, curr, trap) = 
+      match trap with
+      | Some name -> (his, curr, trap)
+      | None -> 
+      let newCurr = Some ([], make_nothing evn) in 
+      (match curr with 
+        None -> (his, newCurr, trap)
+      | Some (path, curr) -> let newHis = PCon (his, PInstance (path, curr)) in 
+      (newHis, newCurr, trap)
+      )
+    in List.map (helper) current
+  | Seq (p1, p2) ->  
+    List.flatten (
+      List.map (fun (his, cur, trap) ->
+    match trap with 
+      Some _ ->[(his, cur, trap)]
+    | None -> let states1 = forward evn current p1 original full in 
+              List.flatten (List.map (fun (his1, cur1, trap1)->
+              match trap1 with 
+                Some _ -> [(his1, cur1, trap1)]
+              | None -> forward evn [(his1, cur1, trap1)] p2 original full
+
+              )states1)
+    
+    ) current 
+    )
+    
+    
+  | Declear (s, progIn ) -> 
+    let newCur = List.map (
+      fun (his, a, trap) ->
+      match a with
+        None -> (his, None, trap) 
+      | Some  (path, curr) ->(his, Some (path, List.append curr [(Zero s)]), trap)
+    )
+    current
+    in 
+    forward (List.append evn [s]) ( newCur) progIn original full
+
+
+  | Loop prog ->
+     (*forward evn current prog original full 
+     *)
+     List.flatten (List.map (fun ((his:p_es), curr, trap) -> 
+      match trap with 
+      | Some name  -> [(his, curr, trap)]
+      | None ->
+      match curr with 
+        None -> raise (Foo "something wrong before entering loop")
+      | Some curr1 ->
+        
+       (* by cases *)
+        let newState_list = forward evn [(PEmp, Some ([], make_nothing evn), trap )] prog original full in
+        List.flatten (
+          List.map (fun (new_his, new_curr, new_trap) ->
+          match new_trap with 
+          | Some name -> [(PCon (his, addToHead curr1 new_his), new_curr, new_trap)]
+          | None -> 
+          
+          let new_his = normalPES new_his in 
+          match new_curr with 
+            None -> raise (Foo "something wrong inside loop")
+          | Some (new_p, new_curr1) -> 
+            let head_tail_list = split_p_es_head_tail (normalPES new_his) in 
+            List.map (fun (((p, head):p_instance), (tail:p_es)) ->
+            print_string (string_of_sl head);
+            print_string (string_of_p_es tail);
+
+            print_string (string_of_bool (isEmp (head)));
+            print_string (string_of_bool (isEmp (new_curr1)));
+            match (isEmp (head), isEmp new_curr1) with
+              (*两头都有pause, his.curr.(tail.head)^* *)
+              (true, true) -> (PCon (his, PCon (PInstance curr1, POmega (PCon (tail, PInstance (p, head))))), None, None)
+              (*右边有pause, his.(curr+head).(tail.head)^* *)
+            | (false, true) ->(PCon (his, PCon (PInstance (unionSL curr1 (p, head)), POmega (PCon (tail, PInstance (p, head))))), None, None)
+              (*左边有pause, his.curr.(tail.new_curr)^* *)
+            | (true, false) ->
+            print_string ("I am here \n");
+            (PCon (his, PCon (PInstance curr1, POmega (PCon (tail, PInstance (new_p, new_curr1))))), None, None)
+              (*两边都没有pause, his.(curr+head).(tail开头加上结尾的signals)^* *)
+            | (false, false) ->
+            
+            (PCon (his, PCon (PInstance (unionSL curr1 (p, head)), POmega (addToHead (new_p, new_curr1) new_his))), None, None)
+            ) head_tail_list
+          ) newState_list
+        )
+        
+        
+      
+      )
+      
+      
+      current
+      )
+
+
+
+  | Present (s, p1, p2) -> 
+    List.flatten (List.map (fun (his, curr, trap) -> 
+      (match trap with 
+      | Some name  -> [(his, curr, trap)]
+      | None -> 
+          match curr with 
+          | None -> [(his, None, trap)]
+          | Some (path, cur) -> 
+
+          if can_fun s original original full then 
+            if mem s evn then 
+            (
+            let eff1 = forward evn [(his, Some (List.append [(One s)] path, deleteRedundent cur ), trap)] p1 original full in 
+            let eff2 = forward evn [(his, Some (List.append [(Zero s)] path,deleteRedundent cur ), trap)] p2 original full in 
+            List.append eff1 eff2
+            )
+            else 
+            (
+            let eff1 = forward evn [(his, Some ( path,deleteRedundent  cur ), trap)] p1 original full in 
+            let eff2 = forward evn [(his, Some ( path,deleteRedundent cur ), trap)] p2 original full in 
+            List.append eff1 eff2
+            )
+          else (*cannot*)
+            if mem s evn then forward evn [(his, Some (List.append [(Zero s)] path,deleteRedundent cur ), trap)] p2 original full 
+            else forward evn [(his, Some ( path, deleteRedundent cur ), trap)] p2 original full 
+      )
+    ) current)
+    
+  
+    
+        (*
+      print_string(string_of_es (normalES (state_To_es eff1)));
+      print_string ("\n");
+      print_string(string_of_es (normalES (state_To_es eff2)));
+      *)
+  | Run mn -> 
+      List.flatten (List.map (
+        fun (his, cur, trap) ->
+          match trap with
+            Some name -> [(his, cur, trap)]
+          | None -> 
+          let rec helper modules = 
+            match modules with 
+              [] -> raise (Foo ("module "^mn ^"undefined"))
+            | x::xs -> 
+            let (name, _, _, _, _, _) = x in
+            if String.compare name mn == 0 then x else helper xs 
+          in 
+          let (_, in_callee, out_callee, pre_callee, post_callee, body_calles) = helper full in 
+          let temp = (pesToEs (normalPES (state_To_p_es current) )) in 
+          let (res, tree) = check_containment temp  pre_callee in 
+          (print_string ("[T.r.s: Verification when calling "^mn ^"]\n" ^ 
+          printReport temp pre_callee));
+          
+          if res == false then raise (Foo ("Error when calling "^mn^"\n"))
+          else 
+          List.flatten (List.map (fun (his, curr, trap) -> 
+          match curr with 
+            None -> [(his, curr, trap)]
+          | Some curr -> p_es_To_state (PCon (his, (addToHead curr (esToPes post_callee))))) current)
+  
+      ) current )
+
+      
+
+  | Trap (mn, prog) -> 
+      List.flatten (List.map (fun (his, cur, trap)-> 
+      match trap with 
+        Some _ -> [(his, cur, trap)]
+      | None -> 
+          let eff = forward evn [(his, cur, trap)] prog original full in 
+          List.map (fun (hisIn, curIn, trapIn)->
+          match trapIn with 
+            Some name -> if String.compare mn name == 0 then (hisIn, curIn, None)
+                         else (hisIn, curIn, trapIn)
+          | None -> (hisIn, curIn, trapIn)
+          )
+          eff
+      )current)
+  | Exit name -> 
+      List.map (fun (his, cur, trap)-> 
+      match trap with 
+        Some _ -> (his, cur, trap)
+      | None -> (his, cur, Some name)
+      )current
+  | Par (p1, p2)  -> 
+      print_string (string_of_prg_state current ^ "\n");
+      List.flatten (List.map (fun (his, cur, trap)-> 
+      match trap with 
+        Some _ -> [(his, cur, trap)]
+      | None -> 
+
+          let eff1 = forward evn [(his, cur, trap)] p1 original full in 
+          let eff2 = forward evn [(his, cur, trap)] p2 original full in 
+          let combinations = List.flatten (List.map (fun a -> List.map (fun b -> (a, b)) eff2) eff1) in 
+   
+          
+
+          List.flatten (List.map (fun (trace1 , trace2) -> 
+          let (his1, cur1, trap1) = trace1 in 
+          let (his2, cur2, trap2) = trace2 in 
+          match (trap1, trap2) with 
+            (None, None) -> let (combine:p_es) = paralleEffLong  (state_To_p_es [trace1]) (state_To_p_es [trace2])  in 
+            p_es_To_state combine
+          | (Some t1, None) -> let (combine:p_es) = paralleEffShort  (state_To_p_es [trace1]) (state_To_p_es [trace2]) in
+                               List.map (fun (a, b, c) -> (a, b, Some t1)) (p_es_To_state combine)
+          | (None, Some t2) -> let (combine:p_es) = paralleEffShort  (state_To_p_es [trace1]) (state_To_p_es [trace2]) in
+                               List.map (fun (a, b, c) -> (a, b, Some t2)) (p_es_To_state combine)
+          | (Some t1, Some t2) -> let (combine:p_es) = paralleEffShort  (state_To_p_es [trace1]) (state_To_p_es [trace2]) in
+              let lengthhis1 = lengthPES his1  in
+              let lengthhis2 = lengthPES his2  in
+              if lengthhis1 >  lengthhis2 then List.map (fun (a, b, c) -> (a, b, Some t1)) (p_es_To_state combine)
+              else if lengthhis1 < lengthhis2 then List.map (fun (a, b, c) -> (a, b, Some t2)) (p_es_To_state combine)
+              else List.map (fun (a, b, c) -> (a, b, Some t1)) (p_es_To_state combine)
+          ) combinations)
+      )current)
+  | _ -> raise (Foo "not there forward")
+  ;;
+
+let rec definedSignal (xs:signal list) (a:string) : bool = 
+  match xs with 
+    [] -> false 
+  | x::xxs -> 
+            match x with 
+              (One str) -> if String.compare str a  == 0  then true else definedSignal xxs a 
+            | (Zero str) -> if String.compare str a == 0 then true else definedSignal xxs a 
+;;
+
+let initialProgState (inp:string list) (p_states:prog_states): prog_states = 
+  List.map (
+    fun (his, curr, trap) ->
+    match curr with 
+      None -> (his, curr, trap)
+    | Some (path, (curr1:signal list)) -> 
+      let newCurr = List.fold_left (
+        fun acc a -> if definedSignal acc a then acc else List.append acc [(Zero a)]
+      ) curr1 inp in 
+      (his, Some (path, newCurr), trap)
+  )
+  p_states
+
+
   ;;
 
 
-let analyse prog1 : string = 
-  let (spec, prog) = prog1 in 
-  let forward:postcondition = normal_post (fowward_inter prog) in  
-  let logical_res :(es list) = logical_check_post forward in
-  let resultList = List.fold_left (fun acc a -> acc ^ (string_of_es a) ^ "\n") "\n" logical_res in 
-  let info = "\nForward Result = " ^ resultList in 
-  let head = "<<<<< Logical Correctness Checking >>>>>\n=========================\n" in 
-  if List.length logical_res == 0 then head ^ "Logical incorrect! (null valid assignments)" 
-  else if List.length logical_res >1 then head ^ "Logical incorrect! (multiple valid assignments)\n"  ^ info 
-  else 
-  if (List.length spec > 0 ) then 
-    let verification  = printReport logical_res spec in 
-    head ^ "Logical correct! " ^ info ^"\n <<<<< Temporal Verification >>>>>\n" ^ verification
-  else 
-    head ^ "Logical correct! " ^ info
-   ;;
 
+let verifier (spec_prog:spec_prog) (full: spec_prog list):string = 
+  let (nm, inp_sig, oup_sig, pre,  post, prog) = spec_prog in 
+  (*print_string (string_of_prg_state (es_To_state pre));*)
+  let initialState = initialProgState oup_sig (p_es_To_state (esToPes pre)) in 
+
+
+  let final_states = forward ((*append inp_sig*) oup_sig) (initialState) prog prog full in 
+
+  let finel_p_effects = state_To_p_es final_states in 
+
+  (*print_string (string_of_p_es finel_p_effects);*)
+  let normalFinial_p_eff = normalPESFinal finel_p_effects in 
+  
+  let (res) = logical_correctness inp_sig normalFinial_p_eff in 
+
+  let correct_Eff = normalES (pesToEs normalFinial_p_eff) in 
+
+  "\n========== Module: "^ nm ^" ==========\n" ^
+  "\n(* Correctness Checking: "^" *)\n" ^
+  string_of_p_es (normalFinial_p_eff) ^"\n" ^
+
+  (if res == false then "Logical Incorrect!\n"
+  else 
+  "Logical Correct!\n"^
+  "\n(* Temporal verification: "^ "  *)\n" ^
+  "[Pre  Condition] " ^ string_of_es pre ^"\n"^
+  "[Post Condition] " ^ string_of_es post ^"\n"^
+  "[Final  Effects] " ^ string_of_es correct_Eff ^"\n\n"^
+  (*(string_of_inclusion final_effects post) ^ "\n" ^*)
+  "[T.r.s: Verification for Post Condition]\n" ^ 
+  printReport correct_Eff post
+  )
+  ;;
+
+
+let forward_verification (progs:spec_prog list):string = 
+  List.fold_left (fun acc a -> acc ^ "\n\n" ^ verifier a progs) "" progs ;; 
 
 let () =
   let inputfile = (Sys.getcwd () ^ "/" ^ Sys.argv.(1)) in
@@ -554,10 +529,10 @@ print_string (inputfile ^ "\n" ^ outputfile^"\n");*)
   try
       let lines =  (input_lines ic ) in
       let line = List.fold_right (fun x acc -> acc ^ "\n" ^ x) (List.rev lines) "" in
-      let prog = Parser.full_prog Lexer.token (Lexing.from_string line) in
+      let progs = Parser.full_prog Lexer.token (Lexing.from_string line) in
 
-      (*print_string (string_of_prog prog^"\n");*)
-      print_string ( (analyse prog) ^"\n");
+      (*print_string (string_of_full_prog progs^"\n");*)
+      print_string ( (forward_verification progs) ^"\n");
       
       flush stdout;                (* 现在写入默认设备 *)
       close_in ic                  (* 关闭输入通道 *)

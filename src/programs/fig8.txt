@@ -1,4 +1,0 @@
-(signal S1
-
-(present S1 nothing (emit S1))
-)

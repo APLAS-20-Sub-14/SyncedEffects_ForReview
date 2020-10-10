@@ -1,7 +1,0 @@
-/*
-    ensure ([S2 ]^*)
-*/
-
-
-(signal S
-  (present S emit S nothing ))
