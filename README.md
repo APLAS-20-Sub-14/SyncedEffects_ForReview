@@ -71,22 +71,22 @@ Results by executing ./hip src/programs/0_verview.txt
 ========== Module: close ==========
 
 (* Correctness Checking:  *)
-({ /\ OPEN,!CLOSE,} . { /\ CLOSE,})
+({ /\ OPEN,} . { /\ CLOSE,})
 Logical Correct!
 
 (* Temporal verification:   *)
 [Pre  Condition] {OPEN,}
 [Post Condition] ({} . {CLOSE,})
-[Final  Effects] ({OPEN,!CLOSE,} . {CLOSE,})
+[Final  Effects] ({OPEN,} . {CLOSE,})
 
 [T.r.s: Verification for Post Condition]
 ----------------------------------------
-({OPEN,!CLOSE,} . {CLOSE,}) |- ({} . {CLOSE,})
+({OPEN,} . {CLOSE,}) |- ({} . {CLOSE,})
 [Result] Succeed
 [Verification Time: 1.6e-05 s]
  
 
-* ({OPEN,!CLOSE,} . {CLOSE,}) |- ({} . {CLOSE,})   [UNFOLD]
+* ({OPEN,} . {CLOSE,}) |- ({} . {CLOSE,})   [UNFOLD]
 * └── {CLOSE,} |- {CLOSE,}   [UNFOLD]
 *     └── emp |- emp   [UNFOLD]
 
@@ -95,24 +95,24 @@ Logical Correct!
 ========== Module: manager ==========
 
 (* Correctness Checking:  *)
-({ /\ OPEN,} . ({ /\ !CLOSE,OPEN,})w)
+({ /\ OPEN,} . ({ /\ OPEN,})w)
 Logical Correct!
 
 (* Temporal verification:   *)
 [Pre  Condition] {}
 [Post Condition] (({BTN,} . {CLOSE,}) \/ {})*
-[Final  Effects] ({OPEN,} . ({!CLOSE,OPEN,})w)
+[Final  Effects] ({OPEN,} . ({OPEN,})w)
 
 [T.r.s: Verification for Post Condition]
 ----------------------------------------
-({OPEN,} . ({!CLOSE,OPEN,})w) |- (({BTN,} . {CLOSE,}) \/ {})*
+({OPEN,} . ({OPEN,})w) |- (({BTN,} . {CLOSE,}) \/ {})*
 [Result] Succeed
 [Verification Time: 2.6e-05 s]
  
 
-* ({OPEN,} . ({!CLOSE,OPEN,})w) |- (({BTN,} . {CLOSE,}) \/ {})*   [UNFOLD]
-* └── ({!CLOSE,OPEN,})w |- (({BTN,} . {CLOSE,}) \/ {})*   [UNFOLD]
-*     └── ({!CLOSE,OPEN,})w |- (({BTN,} . {CLOSE,}) \/ {})*   [Reoccur]
+* ({OPEN,} . ({OPEN,})w) |- (({BTN,} . {CLOSE,}) \/ {})*   [UNFOLD]
+* └── ({OPEN,})w |- (({BTN,} . {CLOSE,}) \/ {})*   [UNFOLD]
+*     └── ({OPEN,})w |- (({BTN,} . {CLOSE,}) \/ {})*   [Reoccur]
 ```
 
 2. Loop:
@@ -151,7 +151,7 @@ Logical Correct!
 ----------------------------------------
 ({A,B,} . ({C,B,})w) |- ({A,B,} . ({B,C,})*)
 [Result] Succeed
-[Verification Time: 2.4e-05 s]
+[Verification Time: 2.3e-05 s]
  
 
 * ({A,B,} . ({C,B,})w) |- ({A,B,} . ({B,C,})*)   [UNFOLD]
@@ -184,22 +184,22 @@ Results by executing ./hip src/programs/7_present.txt.
 ========== Module: testcase7 ==========
 
 (* Correctness Checking:  *)
-{!S, /\ !S1,!S,!A,!B,!C,S2,}
+{ /\ S2,}
 Logical Correct!
 
 (* Temporal verification:   *)
 [Pre  Condition] {}
 [Post Condition] ({S2,})*
-[Final  Effects] {!S1,!S,!A,!B,!C,S2,}
+[Final  Effects] {S2,}
 
 [T.r.s: Verification for Post Condition]
 ----------------------------------------
-{!S1,!S,!A,!B,!C,S2,} |- ({S2,})*
+{S2,} |- ({S2,})*
 [Result] Succeed
-[Verification Time: 1.7e-05 s]
+[Verification Time: 1.5e-05 s]
  
 
-* {!S1,!S,!A,!B,!C,S2,} |- ({S2,})*   [UNFOLD]
+* {S2,} |- ({S2,})*   [UNFOLD]
 * └── emp |- ({S2,})*   [UNFOLD]
 ```
 
@@ -207,71 +207,58 @@ Logical Correct!
 ### (2) Entailments Checking Examples:
 1 ./sleek src/effects/Disjunction_both.ee
 ```
-====================================
-[A;B] + [C] + [B;D] |- [A;D] + [B]
+----------------------------------------
+{A,B,} \/ {C,} \/ {B,D,} |- {A,D,} \/ {B,}
 [Result] Fail
-[Verification Time: 5.6e-05 s]
+[Verification Time: 1.7e-05 s]
  
 
-* [A;B] + [C] + [B;D] |- [A;D] + [B]
-* └── (-[A;B])[A;B] + [C] + [B;D] |- [A;D] + [B]   [UNFOLD]
-*     ├── (-[C])[A;B] + [C] + [B;D] |- [A;D] + [B]   [UNFOLD]
-*     │   ├── (-[B;D])[A;B] + [C] + [B;D] |- [A;D] + [B]   [UNFOLD]
-*     │   │   └── Emp |- Emp   [PROVE]
-*     │   └── Emp |- _|_   [DISPROVE]
-*     └── Emp |- Emp   [PROVE]
+* {A,B,} \/ {C,} \/ {B,D,} |- {A,D,} \/ {B,}   [UNFOLD]
+* ├── emp |- _|_   [DISPROVE]
+* └── emp |- emp   [UNFOLD]
 
-====================================
-[A;B] + [C] + [B;D] |- [A;D] + [B] + [C]
+----------------------------------------
+{A,B,} \/ {C,} \/ {B,D,} |- {A,D,} \/ {B,} \/ {C,}
 [Result] Succeed
-[Verification Time: 8.2e-05 s]
+[Verification Time: 2.7e-05 s]
  
 
-* [A;B] + [C] + [B;D] |- [A;D] + [B] + [C]
-* └── (-[A;B])[A;B] + [C] + [B;D] |- [A;D] + [B] + [C]   [UNFOLD]
-*     ├── (-[C])[A;B] + [C] + [B;D] |- [A;D] + [B] + [C]   [UNFOLD]
-*     │   ├── (-[B;D])[A;B] + [C] + [B;D] |- [A;D] + [B] + [C]   [UNFOLD]
-*     │   │   └── Emp |- Emp   [PROVE]
-*     │   └── Emp |- Emp   [PROVE]
-*     └── Emp |- Emp   [PROVE]
+* {A,B,} \/ {C,} \/ {B,D,} |- {A,D,} \/ {B,} \/ {C,}   [UNFOLD]
+* ├── emp |- emp   [UNFOLD]
+* ├── emp |- emp   [UNFOLD]
+* └── emp |- emp   [UNFOLD]
 
-====================================
-[A;C] + ([B;D])^* |- (_)^* + [A]
+----------------------------------------
+{A,C,} \/ ({B,D,})* |- ({})* \/ {A,}
 [Result] Succeed
-[Verification Time: 5.4e-05 s]
+[Verification Time: 2.3e-05 s]
  
 
-* [A;C] + ([B;D])^* |- (_)^* + [A]
-* └── (-[A;C])[A;C] + ([B;D])^* |- (_)^* + [A]   [UNFOLD]
-*     └── (-[B;D])[A;C] + ([B;D])^* |- (_)^* + [A]   [UNFOLD]
-*         └── (-[B;D])([B;D])^* |- (_)^*   [UNFOLD]
-*             └── ([B;D])^* |- (_)^*   [PROVE]
+* {A,C,} \/ ({B,D,})* |- ({})* \/ {A,}   [UNFOLD]
+* ├── ({B,D,})* |- ({})*   [UNFOLD]
+* │   └── ({B,D,})* |- ({})*   [Reoccur]
+* └── emp |- ({})*   [UNFOLD]
 
-====================================
-[D;B] + [A;B].[C;D] |- [A].[C] + [B]
+----------------------------------------
+({D,B,} . {C,D,}) \/ ({A,B,} . {C,D,}) |- ({A,} . {C,}) \/ {B,}
+[Result] Fail
+[Verification Time: 2e-05 s]
+ 
+
+* ({D,B,} . {C,D,}) \/ ({A,B,} . {C,D,}) |- ({A,} . {C,}) \/ {B,}   [UNFOLD]
+* └── {C,D,} |- emp   [UNFOLD]
+*     └── emp |- _|_   [DISPROVE]
+
+----------------------------------------
+{A,B,} \/ {C,D,} \/ {E,} |- {B,} \/ ({})*
 [Result] Succeed
-[Verification Time: 6.6e-05 s]
+[Verification Time: 2.6e-05 s]
  
 
-* [D;B] + [A;B].[C;D] |- [A].[C] + [B]
-* └── (-[D;B])[D;B] + [A;B].[C;D] |- [A].[C] + [B]   [UNFOLD]
-*     └── (-[A;B])[D;B] + [A;B].[C;D] |- [A].[C] + [B]   [UNFOLD]
-*         └── (-[C;D])[C;D] |- [C] + Emp   [UNFOLD]
-*             └── Emp |- Emp   [PROVE]
-
-====================================
-[A;B] + [C;D] + [E] |- [B] + (_)^*
-[Result] Succeed
-[Verification Time: 6.8e-05 s]
- 
-
-* [A;B] + [C;D] + [E] |- [B] + (_)^*
-* └── (-[A;B])[A;B] + [C;D] + [E] |- [B] + (_)^*   [UNFOLD]
-*     ├── (-[C;D])[A;B] + [C;D] + [E] |- [B] + (_)^*   [UNFOLD]
-*     │   ├── (-[E])[A;B] + [C;D] + [E] |- [B] + (_)^*   [UNFOLD]
-*     │   │   └── Emp |- (_)^*   [PROVE]
-*     │   └── Emp |- (_)^*   [PROVE]
-*     └── Emp |- Emp + (_)^*   [PROVE]
+* {A,B,} \/ {C,D,} \/ {E,} |- {B,} \/ ({})*   [UNFOLD]
+* ├── emp |- ({})*   [UNFOLD]
+* ├── emp |- ({})*   [UNFOLD]
+* └── emp |- ({})*   [UNFOLD]
 ```
 
 
