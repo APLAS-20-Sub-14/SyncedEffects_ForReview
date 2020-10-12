@@ -7,30 +7,37 @@ open Pretty
 open Printf
 
 
-let rec translateLTL (ltl:ltl) : es list =
+let rec translateLTL (ltl:ltl) : es =
   match ltl with 
-    Lable str -> [Instance ([], [(str, One)]) ]
-  | Next l -> List.map (fun a -> Con (Any, a)) (translateLTL l)
-  | Global l -> List.map (fun a -> (Kleene a)) (translateLTL l)
+    Lable str -> Instance ([(One str)])
+  | Next l -> Con (Instance [], translateLTL l)
+  | Global l ->  Omega (translateLTL l)
   | OrLTL (l1, l2) -> 
     let temp1 =  translateLTL l1 in 
     let temp2 =  translateLTL l2 in 
-    List.append temp1 temp2
+    Disj (temp1, temp2)
   | Until (l1, l2) -> 
     let temp1 =  translateLTL l1 in 
     let temp2 =  translateLTL l2 in 
-    List.flatten (List.map (fun a -> List.map (fun b -> Con (Kleene (a), b) ) temp2) temp1 )
+    Con (Kleene (temp1), temp2)
   | Future l -> 
     let temp =  translateLTL l in 
-    List.map (fun a-> Con(Kleene Any, a)) temp
+    Con(Kleene (Instance []), temp) 
   
   | NotLTL l -> 
-    let temp =  translateLTL l in 
-    List.map (fun a-> Not a) temp
+    (match l with 
+      Lable str  -> Instance ([(Zero str)])
+    | _ -> raise (Foo "error NotLTL")
+    )
+   
   | Imply (l1, l2) -> 
-    let temp1 =  translateLTL l1 in 
+    let temp1 =  
+      match l1 with 
+        Lable str  -> Instance ([(Zero str)])
+        | _ -> raise (Foo "error Imply")
+      in 
     let temp2 =  translateLTL l2 in 
-    List.flatten (List.flatten (List.map (fun a -> List.map (fun b -> List.append [(Not a)] [b] ) temp2) temp1 ))
+    Disj (temp1, temp2)
 
 
   | _ -> raise (Foo "translateLTL")
@@ -67,7 +74,7 @@ let main =
     let producte = List.combine ltlList esList in
 
     let result = List.fold_right (fun (l,e) acc -> 
-      let temp = List.fold_left (fun acc a -> acc ^"\n"^ string_of_es a) "" e in 
+      let temp = string_of_es e in 
         let buffur = ( "===================================="^"\n" ^(showLTL l)^"\n\n[Translated to Effects] ===>\n " ^temp  ^" \n\n") in 
 
         acc ^  buffur) 

@@ -80,6 +80,8 @@ rule token = parse
 
 | "/*@" {LSPEC}
 | "@*/" {RSPEC}
+| "[]" {GLOBAL}
+
 | eof { EOF }
 
 (*
@@ -92,7 +94,6 @@ rule token = parse
 | "if" {IF}
 | "else" {ELSE}
 
-| "[]" {GLOBAL}
 | "include" {INCLUDE}
 | "true" { TRUEE (bool_of_string (Lexing.lexeme lexbuf))}
 | "false" { FALSEE (bool_of_string (Lexing.lexeme lexbuf))}
