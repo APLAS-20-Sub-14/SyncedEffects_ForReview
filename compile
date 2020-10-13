@@ -1,13 +1,13 @@
 #!/bin/bash
 # My first script
 ocamllex lexer.mll
-menhir parser.mly
+menhir parser.mly  --unused-precedence-levels --unused-tokens   --explain
 ocamlc -c ast.mli
 ocamlc -c parser.mli
-ocamlc -c parser.ml
-ocamlc -c lexer.ml
+ocamlc -c parser.ml 
+ocamlc -c lexer.ml 
 #ocamlc -c -o Askz3.cmo Askz3.ml
-ocamlc -c Pretty.ml
+ocamlc -c Pretty.ml 
 
 ocamlc -c -o Rewriting.cmo  BackEnd/Rewriting.ml
 
