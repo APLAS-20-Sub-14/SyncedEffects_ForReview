@@ -507,13 +507,13 @@ let verifier (spec_prog:spec_prog) (full: spec_prog list):string =
   let correct_Eff = normalES (pesToEs normalFinial_p_eff) in 
 
   "\n========== Module: "^ nm ^" ==========\n" ^
-  "\n(* Correctness Checking: "^" *)\n" ^
+  "\n>>> STAGE 1: Correctness Checking: "^" <<<\n" ^
   string_of_p_es (normalFinial_p_eff) ^"\n" ^
 
   (if res == false then "Logical Incorrect!\n"
   else 
   "Logical Correct!\n"^
-  "\n(* Temporal verification: "^ "  *)\n" ^
+  "\n>>> STAGE 2: Temporal verification: "^ " <<<\n" ^
   "[Pre  Condition] " ^ string_of_es pre ^"\n"^
   "[Post Condition] " ^ string_of_es post ^"\n"^
   "[Final  Effects] " ^ string_of_es correct_Eff ^"\n\n"^
