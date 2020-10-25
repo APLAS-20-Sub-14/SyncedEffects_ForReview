@@ -23,11 +23,17 @@ install:
 
 	ocamlc -o ltl parser.cmo  lexer.cmo Pretty.cmo LTL_Traslator.cmo
 	
-	sudo cp ltl /usr/local/bin/ltl
+	cp ltl /usr/local/bin/ltl
 	
-	sudo cp hip /usr/local/bin/hip
+	cp hip /usr/local/bin/hip
 	
-	sudo cp sleek /usr/local/bin/sleek
+	cp sleek /usr/local/bin/sleek
+	
+	cp ltl /usr/bin/ltl
+	
+	cp hip /usr/bin/hip
+	
+	cp sleek /usr/bin/sleek
 
 
 clean:
